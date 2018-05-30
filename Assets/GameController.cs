@@ -10,10 +10,14 @@ public class GameController : MonoBehaviour {
     public GameObject[] playField = new GameObject[NUMCARDS];
     public GameObject table;
     private string gameState;
+    private int numMatches = 0;
     private List<Card> openCards = new List<Card>();
     private List<Card> completedCards = new List<Card>();
     private List<Card> hiddenCards = new List<Card>();
-
+    private bool skipAnimation = false;
+    private float timeElapsed = 0.0f;
+    private bool isTimerRunning;
+    
     void setCards()
     {
         int numCards = 16;
@@ -43,7 +47,7 @@ public class GameController : MonoBehaviour {
         playField[15].GetComponent<Card>().setCard(cardFaces[6], "standard", "RedSquare");
 
 
-        for (int i=0; i< 50; i++) swapTwoNoAnim(Random.Range(0,numCards), Random.Range(0, numCards));
+       // for (int i=0; i< 50; i++) swapTwoNoAnim(Random.Range(0,numCards), Random.Range(0, numCards));
 
  
 
@@ -53,12 +57,33 @@ public class GameController : MonoBehaviour {
     IEnumerator flipTable()
     {
         int numSteps = 100;
-        for (int i = 0; i < numSteps; i++)
+        int deltaStep = 1;
+        float percentage = 0;
+
+        float startingAngle = table.transform.eulerAngles.z;
+
+        for (int i = 0; i <= numSteps; i+=deltaStep)
         {
-            table.transform.Rotate(new Vector3(0, 0, (float)90/(float)numSteps ));
+            // if (skipAnimation) deltaStep = 3;
+            //table.transform.Rotate(new Vector3(0, 0, (float)90/((float)numSteps/(float)deltaStep)) );
+            // table.transform.rotation = new Quaternion(table.transform.rotation.x, table.transform.rotation.y, table.transform.rotation.z, table.transform.rotation.w);
+            percentage = (float)i / ((float)numSteps/(float)deltaStep);
+
+          //  Debug.Log("before: " + table.transform.eulerAngles.z);
+
+            //table.transform.rotation = new Quaternion(table.transform.rotation.x, table.transform.rotation.y, , table.transform.rotation.w);
+            Vector3 currentAngle = new Vector3(
+            0,
+            0,
+            Mathf.LerpAngle(startingAngle, startingAngle+90, percentage));
+            table.transform.eulerAngles = currentAngle;
+       
+
+
             yield return null;
         }
 
+        if (skipAnimation) skipAnimation = false;
         gameState = "playerSelectA";
 
         yield return null;
@@ -76,12 +101,15 @@ public class GameController : MonoBehaviour {
 
     IEnumerator swapTwo(int cardA, int cardB)
     {
-        float deltaSize = 0.005f;
+        float deltaSize = 0.006f;
 
         hiddenCards[cardA].gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "HigherCards";
         hiddenCards[cardB].gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "HigherCards";
+        hiddenCards[cardA].gameObject.GetComponent<SpriteRenderer>().sprite = hiddenCards[cardA].cardBackActiveSprite;
+        hiddenCards[cardB].gameObject.GetComponent<SpriteRenderer>().sprite = hiddenCards[cardB].cardBackActiveSprite;
 
-        for (int i = 0; i < 20; i++)
+
+        for (int i = 0; i < 15; i++)
         { 
             hiddenCards[cardA].gameObject.transform.localScale = new Vector2(hiddenCards[cardA].gameObject.transform.localScale.x+deltaSize,
                                                                            hiddenCards[cardA].gameObject.transform.localScale.y+deltaSize);
@@ -95,7 +123,7 @@ public class GameController : MonoBehaviour {
 
         yield return null;
 
-        int steps = 80;
+        int steps = 50;
         Vector2 cardAOrigin = hiddenCards[cardA].gameObject.transform.position;
         Vector2 cardBOrigin = hiddenCards[cardB].gameObject.transform.position;
         for (int i = 0; i < steps; i++)
@@ -108,7 +136,7 @@ public class GameController : MonoBehaviour {
 
             yield return null;
 
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 15; i++)
         {
             hiddenCards[cardA].gameObject.transform.localScale = new Vector2(hiddenCards[cardA].gameObject.transform.localScale.x - deltaSize,
                                                                            hiddenCards[cardA].gameObject.transform.localScale.y - deltaSize);
@@ -122,7 +150,10 @@ public class GameController : MonoBehaviour {
 
         hiddenCards[cardA].gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "Cards";
         hiddenCards[cardB].gameObject.GetComponent<SpriteRenderer>().sortingLayerName = "Cards";
+        hiddenCards[cardA].gameObject.GetComponent<SpriteRenderer>().sprite = hiddenCards[cardA].cardBackSprite;
+        hiddenCards[cardB].gameObject.GetComponent<SpriteRenderer>().sprite = hiddenCards[cardB].cardBackSprite;
 
+        if (skipAnimation) skipAnimation = false;
         gameState = "playerSelectA";
 
         yield return null;
@@ -161,21 +192,33 @@ public class GameController : MonoBehaviour {
     {
         bool isMatch = checkOpenCardsMatch();
 
-        yield return new WaitForSeconds(1);
+        
+        if (skipAnimation) skipAnimation = false;
 
-        if (!isMatch) flipOpenCards();
-        else
+        if (!isMatch)
         {
             foreach (Card _card in openCards)
             {
+                _card.GetComponent<Animator>().SetTrigger("incorrect");
+            }
+            yield return new WaitForSeconds(1.5f);
+            flipOpenCards();
+        }
+        else
+        {
+
+            foreach (Card _card in openCards)
+            {
+                _card.GetComponent<Animator>().SetTrigger("flipCardCorrect");
                 completedCards.Add(_card);
                 hiddenCards.Remove(_card);
             }
 
             openCards.Clear();
+
         }
 
-        if (completedCards.Count == 6) Debug.Log("Game Over");
+        if (completedCards.Count == 12) { Debug.Log("Game Over"); isTimerRunning = false; }
         gameState = "playerSelectA";
 
 
@@ -186,16 +229,23 @@ public class GameController : MonoBehaviour {
 
     public void cardClicked(Card clickedCard)
     {
+        if (isTimerRunning == false && numMatches == 0) isTimerRunning = true;
+
+        
         if (clickedCard.getCardType() == "standard")
         {
             if (gameState == "playerSelectA")
             {
+                //clickedCard.GetComponent<Animator>().SetTrigger("flipCard");
+
                 clickedCard.revealCard();
                 openCards.Add(clickedCard);
                 gameState = "playerSelectB";
             }
             else if (gameState == "playerSelectB")
             {
+                //clickedCard.GetComponent<Animator>().SetTrigger("flipCard");
+
                 clickedCard.revealCard();
                 openCards.Add(clickedCard);
                 //bool isMatch = checkOpenCardsMatch();
@@ -207,6 +257,7 @@ public class GameController : MonoBehaviour {
             else if (gameState == "checkMatch")
             {
                 Debug.Log("Locked out");
+                skipAnimation = true;
             }
         }
         else
@@ -241,20 +292,35 @@ public class GameController : MonoBehaviour {
 
         setCards();
         gameState = "playerSelectA";
+    
 
     }
 
     // Update is called once per frame
     void Update () {
-		
+        // timeText.GetComponent<Text>().text = "test";
+        if (isTimerRunning)
+        {
+            timeElapsed += Time.deltaTime;
+
+            string mins = "";
+            string secs = "";
+            string milis = "";
+
+            int numMins = (int)(timeElapsed / 60);
+            int numSecs = (int)timeElapsed;
+            int numMilis = (int)((timeElapsed - numSecs) * 100);
+
+            if (numMins < 10) mins = "0";
+            if (numSecs < 10) secs = "0";
+            if (numMilis < 10) milis = "0";
+
+
+            mins += numMins.ToString();
+            secs += numSecs.ToString();
+            milis += numMilis.ToString();
+
+            gameObject.GetComponent<TextMesh>().text = mins + " : " + secs + " : " + milis;
+        }
 	}
 }
-
-//TODO
-
-//add timing for cards on 2nd turn
-//add animation
-//change sorting layer so swapped cards are on top
-//tweak timing and feedback for looses
-//tweak feedback for wins
-//add score / time

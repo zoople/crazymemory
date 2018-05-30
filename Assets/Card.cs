@@ -9,6 +9,8 @@ public class Card : MonoBehaviour {
     private string cardType;
     private string cardFaceValue;
     public Sprite cardBackSprite;
+    public Sprite cardBackActiveSprite;
+
     public bool faceUp = false;
 
 	public void setCard(Sprite _face, string _cardType, string _cardFace)

@@ -126,7 +126,7 @@ public class GameController : MonoBehaviour {
         int steps = 50;
         Vector2 cardAOrigin = hiddenCards[cardA].gameObject.transform.position;
         Vector2 cardBOrigin = hiddenCards[cardB].gameObject.transform.position;
-        for (int i = 0; i < steps; i++)
+        for (int i = 0; i <= steps; i++)
         {
             hiddenCards[cardA].gameObject.transform.position = Vector2.Lerp(cardAOrigin, cardBOrigin, ((float)i / (float)steps));
             hiddenCards[cardB].gameObject.transform.position = Vector2.Lerp(cardBOrigin, cardAOrigin, ((float)i / (float)steps));
@@ -236,7 +236,7 @@ public class GameController : MonoBehaviour {
         {
             if (gameState == "playerSelectA")
             {
-                //clickedCard.GetComponent<Animator>().SetTrigger("flipCard");
+               // clickedCard.GetComponent<Animator>().SetTrigger("flipCard");
 
                 clickedCard.revealCard();
                 openCards.Add(clickedCard);

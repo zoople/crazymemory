@@ -11,6 +11,7 @@ public class Card : MonoBehaviour {
     public Sprite cardBackSprite;
     public Sprite cardBackActiveSprite;
 
+
     public bool faceUp = false;
 
 	public void setCard(Sprite _face, string _cardType, string _cardFace)
@@ -35,7 +36,11 @@ public class Card : MonoBehaviour {
 
     public void OnMouseDown()
     {
-        if (!faceUp) GameController.instance.cardClicked(this);
+        if (!faceUp)
+        {
+            GameController.instance.cardClicked(this);
+            gameObject.GetComponent<AudioSource>().Play();
+        }
     }
 
     public Sprite getFacesprite() { return cardFaceSprite; }

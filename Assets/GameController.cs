@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour {
 
@@ -17,7 +18,12 @@ public class GameController : MonoBehaviour {
     private bool skipAnimation = false;
     private float timeElapsed = 0.0f;
     private bool isTimerRunning;
-    
+    public GameObject completionDisplay;
+    public Sprite[] completionBars;
+    public AudioClip[] gameSounds;
+    public GameObject gameOverScreen;
+
+
     void setCards()
     {
         int numCards = 16;
@@ -47,7 +53,7 @@ public class GameController : MonoBehaviour {
         playField[15].GetComponent<Card>().setCard(cardFaces[6], "standard", "RedSquare");
 
 
-       // for (int i=0; i< 50; i++) swapTwoNoAnim(Random.Range(0,numCards), Random.Range(0, numCards));
+        for (int i=0; i< 50; i++) swapTwoNoAnim(Random.Range(0,numCards), Random.Range(0, numCards));
 
  
 
@@ -174,18 +180,35 @@ public class GameController : MonoBehaviour {
 
     public bool checkOpenCardsMatch()
     {
-        bool match = true;
+       // bool match = true;
         string cardToMach = null;
 
         foreach (Card _card in openCards)
         {
             if (cardToMach == null) cardToMach = _card.getFaceValue();
 
-            else if (_card.getFaceValue() != cardToMach) return false;
+            else if (_card.getFaceValue() != cardToMach)
+            {
+                gameObject.GetComponents<AudioSource>()[1].clip = gameSounds[1];
+                gameObject.GetComponents<AudioSource>()[1].Play();
+                return false;
+            }
         }
+
+        gameObject.GetComponents<AudioSource>()[1].clip = gameSounds[0];
+        gameObject.GetComponents<AudioSource>()[1].Play();
+
+        numMatches++;
+        completionDisplay.GetComponent<SpriteRenderer>().sprite = completionBars[numMatches];
         return true;
 
 
+    }
+
+    public void newGame()
+    {
+        Scene loadedLevel = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(loadedLevel.buildIndex);
     }
 
     IEnumerator endOfRound()
@@ -201,7 +224,7 @@ public class GameController : MonoBehaviour {
             {
                 _card.GetComponent<Animator>().SetTrigger("incorrect");
             }
-            yield return new WaitForSeconds(1.5f);
+            yield return new WaitForSeconds(0.75f);
             flipOpenCards();
         }
         else
@@ -218,7 +241,7 @@ public class GameController : MonoBehaviour {
 
         }
 
-        if (completedCards.Count == 12) { Debug.Log("Game Over"); isTimerRunning = false; }
+        if (completedCards.Count == 12) { Debug.Log("Game Over"); isTimerRunning = false;  gameOverScreen.SetActive(true); }
         gameState = "playerSelectA";
 
 
@@ -275,9 +298,16 @@ public class GameController : MonoBehaviour {
                     int cardA = Random.Range(0, hiddenCards.Count);
                     int cardB = Random.Range(0, hiddenCards.Count);
                     while (cardB == cardA) cardB = Random.Range(0, hiddenCards.Count);
+                    gameObject.GetComponents<AudioSource>()[1].clip = gameSounds[2];
+                    gameObject.GetComponents<AudioSource>()[1].Play();
                     StartCoroutine(swapTwo(cardA, cardB));
                 }
-                if (clickedCard.getFaceValue() == "HazardRotate") StartCoroutine(flipTable());
+                if (clickedCard.getFaceValue() == "HazardRotate")
+                {
+                    gameObject.GetComponents<AudioSource>()[1].clip = gameSounds[3];
+                    gameObject.GetComponents<AudioSource>()[1].Play();
+                    StartCoroutine(flipTable());
+                }
 
                 openCards.Clear();
 
@@ -290,10 +320,39 @@ public class GameController : MonoBehaviour {
         if (instance == null) instance = this;
         else if (instance != this) Destroy(gameObject);
 
+        if (PlayerPrefs.GetInt("highscorePos1") == 0) PlayerPrefs.SetInt("highscorePos1", 100000);
+
+
         setCards();
         gameState = "playerSelectA";
     
 
+    }
+
+    string timeFormat(float timeElapsed)
+    {
+        string timeDisplay = "";
+
+        string mins = "";
+        string secs = "";
+        string milis = "";
+
+        int numMins = (int)(timeElapsed / 60);
+        int numSecs = (int)timeElapsed;
+        int numMilis = (int)((timeElapsed - numSecs) * 100);
+
+        if (numMins < 10) mins = "0";
+        if (numSecs < 10) secs = "0";
+        if (numMilis < 10) milis = "0";
+
+
+        mins += numMins.ToString();
+        secs += numSecs.ToString();
+        milis += numMilis.ToString();
+
+        timeDisplay = mins + " : " + secs + " : " + milis;
+
+        return timeDisplay;
     }
 
     // Update is called once per frame
@@ -303,24 +362,8 @@ public class GameController : MonoBehaviour {
         {
             timeElapsed += Time.deltaTime;
 
-            string mins = "";
-            string secs = "";
-            string milis = "";
-
-            int numMins = (int)(timeElapsed / 60);
-            int numSecs = (int)timeElapsed;
-            int numMilis = (int)((timeElapsed - numSecs) * 100);
-
-            if (numMins < 10) mins = "0";
-            if (numSecs < 10) secs = "0";
-            if (numMilis < 10) milis = "0";
-
-
-            mins += numMins.ToString();
-            secs += numSecs.ToString();
-            milis += numMilis.ToString();
-
-            gameObject.GetComponent<TextMesh>().text = mins + " : " + secs + " : " + milis;
+            
+            gameObject.GetComponent<TextMesh>().text = timeFormat(timeElapsed);
         }
 	}
 }
